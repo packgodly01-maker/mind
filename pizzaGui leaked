@@ -1,0 +1,108 @@
+-- player
+local player = game.Players.LocalPlayer
+
+-- GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "PizzaGUI"
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+-- main frame
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 220, 0, 150)
+mainFrame.Position = UDim2.new(0.5, -110, 0.5, -75)
+mainFrame.BackgroundColor3 = Color3.fromRGB(255,117,24)
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = screenGui
+mainFrame.Active = true
+mainFrame.Draggable = true
+
+-- title
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1,0,0,25)
+title.BackgroundTransparency = 1
+title.Text = "PIZZA GUI"
+title.TextColor3 = Color3.fromRGB(255,165,0)
+title.TextScaled = true
+title.Font = Enum.Font.Fantasy
+title.Parent = mainFrame
+
+-- paid label
+local paid = Instance.new("TextLabel")
+paid.Size = UDim2.new(0,50,0,20)
+paid.Position = UDim2.new(1,-55,0,2)
+paid.BackgroundTransparency = 1
+paid.Text = "PAID"
+paid.TextColor3 = Color3.fromRGB(255,0,0)
+paid.TextScaled = true
+paid.Font = Enum.Font.Fantasy
+paid.Parent = mainFrame
+
+-- close button
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.new(0,20,0,20)
+closeButton.Position = UDim2.new(1,-25,0,5)
+closeButton.Text = "X"
+closeButton.TextScaled = true
+closeButton.BackgroundColor3 = Color3.fromRGB(200,0,0)
+closeButton.TextColor3 = Color3.new(1,1,1)
+closeButton.Parent = mainFrame
+
+-- reopen button
+local openButton = Instance.new("TextButton")
+openButton.Size = UDim2.new(0,80,0,25)
+openButton.Position = UDim2.new(0,10,1,-35)
+openButton.Text = "Open GUI"
+openButton.TextScaled = true
+openButton.BackgroundColor3 = Color3.fromRGB(100,100,100)
+openButton.TextColor3 = Color3.new(1,1,1)
+openButton.Parent = screenGui
+openButton.Visible = false
+
+closeButton.MouseButton1Click:Connect(function()
+	mainFrame.Visible = false
+	openButton.Visible = true
+end)
+
+openButton.MouseButton1Click:Connect(function()
+	mainFrame.Visible = true
+	openButton.Visible = false
+end)
+
+-- position variable
+local savedPosition = nil
+
+-- save position button
+local saveButton = Instance.new("TextButton")
+saveButton.Size = UDim2.new(0,90,0,30)
+saveButton.Position = UDim2.new(0,10,0,50)
+saveButton.Text = "Save Pos"
+saveButton.BackgroundColor3 = Color3.fromRGB(255,200,120)
+saveButton.TextScaled = true
+saveButton.Parent = mainFrame
+
+-- teleport button
+local tpButton = Instance.new("TextButton")
+tpButton.Size = UDim2.new(0,90,0,30)
+tpButton.Position = UDim2.new(0,110,0,50)
+tpButton.Text = "Teleport"
+tpButton.BackgroundColor3 = Color3.fromRGB(255,200,120)
+tpButton.TextScaled = true
+tpButton.Parent = mainFrame
+
+-- save position
+saveButton.MouseButton1Click:Connect(function()
+	local char = player.Character
+	if char and char:FindFirstChild("HumanoidRootPart") then
+		savedPosition = char.HumanoidRootPart.Position
+		print("Position Saved")
+	end
+end)
+
+-- teleport
+tpButton.MouseButton1Click:Connect(function()
+	local char = player.Character
+	if savedPosition and char and char:FindFirstChild("HumanoidRootPart") then
+		char:MoveTo(savedPosition)
+		print("Teleported")
+	end
+end)
