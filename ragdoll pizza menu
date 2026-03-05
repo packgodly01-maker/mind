@@ -1,0 +1,179 @@
+local player = game.Players.LocalPlayer
+
+-- GUI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "PizzaGUI"
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+-- main frame
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0,220,0,180)
+mainFrame.Position = UDim2.new(0.5,-110,0.5,-90)
+mainFrame.BackgroundColor3 = Color3.fromRGB(255,117,24)
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = screenGui
+mainFrame.Active = true
+mainFrame.Draggable = true
+
+local frameCorner = Instance.new("UICorner")
+frameCorner.CornerRadius = UDim.new(0,12)
+frameCorner.Parent = mainFrame
+
+-- title
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1,0,0,25)
+title.BackgroundTransparency = 1
+title.Text = "PIZZA GUI"
+title.TextColor3 = Color3.fromRGB(255,165,0)
+title.TextScaled = true
+title.Font = Enum.Font.Fantasy
+title.Parent = mainFrame
+
+-- paid label
+local paid = Instance.new("TextLabel")
+paid.Size = UDim2.new(0,50,0,20)
+paid.Position = UDim2.new(1,-55,0,2)
+paid.BackgroundTransparency = 1
+paid.Text = "PAID"
+paid.TextColor3 = Color3.fromRGB(255,0,0)
+paid.TextScaled = true
+paid.Font = Enum.Font.Fantasy
+paid.Parent = mainFrame
+
+local function roundButton(button)
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0,8)
+	corner.Parent = button
+end
+
+-- close button
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.new(0,20,0,20)
+closeButton.Position = UDim2.new(1,-25,0,5)
+closeButton.Text = "X"
+closeButton.TextScaled = true
+closeButton.BackgroundColor3 = Color3.fromRGB(200,0,0)
+closeButton.TextColor3 = Color3.new(1,1,1)
+closeButton.Parent = mainFrame
+roundButton(closeButton)
+
+-- pizza reopen button
+local openButton = Instance.new("TextButton")
+openButton.Size = UDim2.new(0,50,0,50)
+openButton.Position = UDim2.new(0,15,1,-60)
+openButton.Text = "🍕"
+openButton.TextScaled = true
+openButton.BackgroundColor3 = Color3.fromRGB(255,200,120)
+openButton.Parent = screenGui
+openButton.Visible = false
+roundButton(openButton)
+
+closeButton.MouseButton1Click:Connect(function()
+	mainFrame.Visible = false
+	openButton.Visible = true
+end)
+
+openButton.MouseButton1Click:Connect(function()
+	mainFrame.Visible = true
+	openButton.Visible = false
+end)
+
+-- saved position
+local savedPosition = nil
+
+-- save position button
+local saveButton = Instance.new("TextButton")
+saveButton.Size = UDim2.new(0,90,0,30)
+saveButton.Position = UDim2.new(0,10,0,55)
+saveButton.Text = "Save Pos"
+saveButton.TextScaled = true
+saveButton.BackgroundColor3 = Color3.fromRGB(255,200,120)
+saveButton.Parent = mainFrame
+roundButton(saveButton)
+
+-- teleport button
+local tpButton = Instance.new("TextButton")
+tpButton.Size = UDim2.new(0,90,0,30)
+tpButton.Position = UDim2.new(0,110,0,55)
+tpButton.Text = "Teleport"
+tpButton.TextScaled = true
+tpButton.BackgroundColor3 = Color3.fromRGB(255,200,120)
+tpButton.Parent = mainFrame
+roundButton(tpButton)
+
+-- ragdoll button
+local ragdollButton = Instance.new("TextButton")
+ragdollButton.Size = UDim2.new(0,190,0,30)
+ragdollButton.Position = UDim2.new(0,10,0,100)
+ragdollButton.Text = "Ragdoll & Glide"
+ragdollButton.TextScaled = true
+ragdollButton.BackgroundColor3 = Color3.fromRGB(255,200,120)
+ragdollButton.Parent = mainFrame
+roundButton(ragdollButton)
+
+-- save position
+saveButton.MouseButton1Click:Connect(function()
+	local char = player.Character
+	if char and char:FindFirstChild("HumanoidRootPart") then
+		savedPosition = char.HumanoidRootPart.Position
+	end
+end)
+
+-- teleport
+tpButton.MouseButton1Click:Connect(function()
+	local char = player.Character
+	if savedPosition and char and char:FindFirstChild("HumanoidRootPart") then
+		char:MoveTo(savedPosition)
+	end
+end)
+
+-- ragdoll + glide to saved position
+local function ragdollGlide(character)
+	local humanoid = character:FindFirstChild("Humanoid")
+	if not humanoid then return end
+	humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+
+	for _, motor in pairs(character:GetDescendants()) do
+		if motor:IsA("Motor6D") then
+			local a0 = Instance.new("Attachment")
+			local a1 = Instance.new("Attachment")
+
+			a0.Parent = motor.Part0
+			a1.Parent = motor.Part1
+
+			a0.CFrame = motor.C0
+			a1.CFrame = motor.C1
+
+			local socket = Instance.new("BallSocketConstraint")
+			socket.Attachment0 = a0
+			socket.Attachment1 = a1
+			socket.Parent = motor.Parent
+
+			motor:Destroy()
+		end
+	end
+
+	-- glide toward saved position
+	if savedPosition then
+		spawn(function()
+			while humanoid.Parent do
+				local root = character:FindFirstChild("HumanoidRootPart")
+				if root then
+					local direction = (savedPosition - root.Position)
+					local distance = direction.Magnitude
+					if distance < 1 then break end
+					root.Velocity = direction.Unit * 50 -- speed, adjust as needed
+				end
+				task.wait(0.05)
+			end
+		end)
+	end
+end
+
+-- button trigger
+ragdollButton.MouseButton1Click:Connect(function()
+	local char = player.Character
+	if char then
+		ragdollGlide(char)
+	end
+end)
