@@ -1,0 +1,184 @@
+local player = game.Players.LocalPlayer
+local glideLoop = nil
+
+-- Function to create GUI
+local function createPizzaGUI()
+	if player.PlayerGui:FindFirstChild("PizzaGUI") then return end
+
+	local screenGui = Instance.new("ScreenGui")
+	screenGui.Name = "PizzaGUI"
+	screenGui.ResetOnSpawn = false
+	screenGui.Parent = player:WaitForChild("PlayerGui")
+
+	-- main frame
+	local mainFrame = Instance.new("Frame")
+	mainFrame.Size = UDim2.new(0,220,0,220)
+	mainFrame.Position = UDim2.new(0.5,-110,0.5,-110)
+	mainFrame.BackgroundColor3 = Color3.fromRGB(255,117,24)
+	mainFrame.BorderSizePixel = 0
+	mainFrame.Parent = screenGui
+	mainFrame.Active = true
+	mainFrame.Draggable = true
+
+	local frameCorner = Instance.new("UICorner")
+	frameCorner.CornerRadius = UDim.new(0,12)
+	frameCorner.Parent = mainFrame
+
+	local function roundButton(button)
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0,8)
+		corner.Parent = button
+	end
+
+	-- title
+	local title = Instance.new("TextLabel")
+	title.Size = UDim2.new(1,0,0,25)
+	title.BackgroundTransparency = 1
+	title.Text = "PIZZA GUI"
+	title.TextColor3 = Color3.fromRGB(255,165,0)
+	title.TextScaled = true
+	title.Font = Enum.Font.Fantasy
+	title.Parent = mainFrame
+
+	-- Saved position
+	local savedPosition = nil
+
+	-- Buttons
+	local saveButton = Instance.new("TextButton")
+	saveButton.Size = UDim2.new(0,90,0,30)
+	saveButton.Position = UDim2.new(0,10,0,55)
+	saveButton.Text = "Save Pos"
+	saveButton.TextScaled = true
+	saveButton.BackgroundColor3 = Color3.fromRGB(255,200,120)
+	saveButton.Parent = mainFrame
+	roundButton(saveButton)
+
+	local tpButton = Instance.new("TextButton")
+	tpButton.Size = UDim2.new(0,90,0,30)
+	tpButton.Position = UDim2.new(0,110,0,55)
+	tpButton.Text = "Teleport"
+	tpButton.TextScaled = true
+	tpButton.BackgroundColor3 = Color3.fromRGB(255,200,120)
+	tpButton.Parent = mainFrame
+	roundButton(tpButton)
+
+	local ragdollButton = Instance.new("TextButton")
+	ragdollButton.Size = UDim2.new(0,190,0,30)
+	ragdollButton.Position = UDim2.new(0,10,0,100)
+	ragdollButton.Text = "Ragdoll & Glide"
+	ragdollButton.TextScaled = true
+	ragdollButton.BackgroundColor3 = Color3.fromRGB(255,200,120)
+	ragdollButton.Parent = mainFrame
+	roundButton(ragdollButton)
+
+	-- Save position
+	saveButton.MouseButton1Click:Connect(function()
+		local char = player.Character
+		if char and char:FindFirstChild("HumanoidRootPart") then
+			savedPosition = char.HumanoidRootPart.Position
+		end
+	end)
+
+	-- Teleport
+	tpButton.MouseButton1Click:Connect(function()
+		local char = player.Character
+		if savedPosition and char and char:FindFirstChild("HumanoidRootPart") then
+			char:MoveTo(savedPosition)
+		end
+	end)
+
+	-- Store original motors for recovery
+	local originalMotors = {}
+
+	local function storeMotors(character)
+		originalMotors = {}
+		for _, motor in pairs(character:GetDescendants()) do
+			if motor:IsA("Motor6D") then
+				table.insert(originalMotors, motor:Clone())
+			end
+		end
+	end
+
+	-- Recover function
+	local function recover(character)
+		local humanoid = character:FindFirstChild("Humanoid")
+		if not humanoid then return end
+		-- Stop glide
+		if glideLoop then
+			task.cancel(glideLoop)
+			glideLoop = nil
+		end
+		-- Destroy attachments
+		for _, att in pairs(character:GetDescendants()) do
+			if att:IsA("Attachment") or att:IsA("BallSocketConstraint") then
+				att:Destroy()
+			end
+		end
+		-- Restore motors
+		for _, motor in pairs(originalMotors) do
+			if motor.Parent == nil and character:FindFirstChild(motor.Part0.Name) then
+				motor.Parent = character:FindFirstChild(motor.Part0.Name)
+			end
+		end
+		humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+	end
+
+	-- Ragdoll + glide toward saved position
+	local function ragdollGlide(character)
+		local humanoid = character:FindFirstChild("Humanoid")
+		if not humanoid then return end
+		if not savedPosition then return end
+		storeMotors(character)
+		humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+
+		for _, motor in pairs(character:GetDescendants()) do
+			if motor:IsA("Motor6D") then
+				local a0 = Instance.new("Attachment")
+				local a1 = Instance.new("Attachment")
+				a0.Parent = motor.Part0
+				a1.Parent = motor.Part1
+				a0.CFrame = motor.C0
+				a1.CFrame = motor.C1
+				local socket = Instance.new("BallSocketConstraint")
+				socket.Attachment0 = a0
+				socket.Attachment1 = a1
+				socket.Parent = motor.Parent
+				motor:Destroy()
+			end
+		end
+
+		-- Glide loop toward saved position with auto-recover
+		glideLoop = spawn(function()
+			while humanoid.Parent do
+				local root = character:FindFirstChild("HumanoidRootPart")
+				if root then
+					local dir = (savedPosition - root.Position)
+					local dist = dir.Magnitude
+					if dist < 2 then -- reached target
+						recover(character)
+						break
+					end
+					root.Velocity = dir.Unit * 50
+				end
+				task.wait(0.05)
+			end
+		end)
+	end
+
+	-- Button trigger
+	ragdollButton.MouseButton1Click:Connect(function()
+		local char = player.Character
+		if char then
+			ragdollGlide(char)
+		end
+	end)
+end
+
+-- First creation
+createPizzaGUI()
+
+-- Recreate GUI on respawn
+player.CharacterAdded:Connect(function(char)
+	task.wait(1)
+	createPizzaGUI()
+end)
