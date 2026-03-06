@@ -1,284 +1,290 @@
 local player = game.Players.LocalPlayer
-local UIS = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-
-local savedPosition = nil
+local glideLoop = nil
 local autoGrabEnabled = false
 local batAuraEnabled = false
+local auraRadius = 10
 local ragdollNoclipEnabled = false
-local glideActive = false
 
--- GUI
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "PizzaGUI"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = player:WaitForChild("PlayerGui")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0,230,0,320)
-mainFrame.Position = UDim2.new(0.5,-115,0.5,-160)
-mainFrame.BackgroundColor3 = Color3.fromRGB(255,117,24)
-mainFrame.BorderSizePixel = 0
-mainFrame.Active = true
-mainFrame.Draggable = true
-mainFrame.Parent = screenGui
+-- GUI creation
+local function createPizzaGUI()
+	if player.PlayerGui:FindFirstChild("PizzaGUI") then return end
 
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0,12)
-corner.Parent = mainFrame
+	local screenGui = Instance.new("ScreenGui")
+	screenGui.Name = "PizzaGUI"
+	screenGui.ResetOnSpawn = false
+	screenGui.Parent = player:WaitForChild("PlayerGui")
 
-local function round(btn)
-	local c = Instance.new("UICorner")
-	c.CornerRadius = UDim.new(0,8)
-	c.Parent = btn
-end
+	local mainFrame = Instance.new("Frame")
+	mainFrame.Size = UDim2.new(0,220,0,300)
+	mainFrame.Position = UDim2.new(0.5,-110,0.5,-150)
+	mainFrame.BackgroundColor3 = Color3.fromRGB(255,117,24)
+	mainFrame.BorderSizePixel = 0
+	mainFrame.Parent = screenGui
+	mainFrame.Active = true
+	mainFrame.Draggable = true
 
--- TITLE
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1,0,0,30)
-title.BackgroundTransparency = 1
-title.Text = "PIZZA GUI"
-title.TextColor3 = Color3.fromRGB(255,200,0)
-title.Font = Enum.Font.Fantasy
-title.TextScaled = true
-title.Parent = mainFrame
+	local frameCorner = Instance.new("UICorner")
+	frameCorner.CornerRadius = UDim.new(0,12)
+	frameCorner.Parent = mainFrame
 
--- CLOSE BUTTON
-local closeButton = Instance.new("TextButton")
-closeButton.Size = UDim2.new(0,22,0,22)
-closeButton.Position = UDim2.new(1,-25,0,4)
-closeButton.Text = "X"
-closeButton.BackgroundColor3 = Color3.fromRGB(200,0,0)
-closeButton.TextColor3 = Color3.new(1,1,1)
-closeButton.Parent = mainFrame
-round(closeButton)
-
--- REOPEN
-local openButton = Instance.new("TextButton")
-openButton.Size = UDim2.new(0,50,0,50)
-openButton.Position = UDim2.new(0,15,1,-60)
-openButton.Text = "🍕"
-openButton.TextScaled = true
-openButton.BackgroundColor3 = Color3.fromRGB(255,200,120)
-openButton.Visible = false
-openButton.Parent = screenGui
-round(openButton)
-
-closeButton.MouseButton1Click:Connect(function()
-	mainFrame.Visible = false
-	openButton.Visible = true
-end)
-
-openButton.MouseButton1Click:Connect(function()
-	mainFrame.Visible = true
-	openButton.Visible = false
-end)
-
--- BUTTON CREATOR
-local function createButton(text,y)
-	local b = Instance.new("TextButton")
-	b.Size = UDim2.new(0,200,0,30)
-	b.Position = UDim2.new(0,15,0,y)
-	b.Text = text
-	b.TextScaled = true
-	b.BackgroundColor3 = Color3.fromRGB(255,200,120)
-	b.Parent = mainFrame
-	round(b)
-	return b
-end
-
-local saveButton = createButton("Save Position",50)
-local tpButton = createButton("Teleport",90)
-local glideButton = createButton("Ragdoll Glide",130)
-local recoverButton = createButton("Recover",170)
-local autoGrabButton = createButton("Auto Grab: OFF",210)
-local batAuraButton = createButton("Bat Aura: OFF",250)
-local ragdollNoclipButton = createButton("Ragdoll Noclip: OFF",290)
-
--- SAVE POSITION
-saveButton.MouseButton1Click:Connect(function()
-	local char = player.Character
-	if char and char:FindFirstChild("HumanoidRootPart") then
-		savedPosition = char.HumanoidRootPart.Position
+	local function roundButton(button)
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0,8)
+		corner.Parent = button
 	end
-end)
 
--- TELEPORT
-tpButton.MouseButton1Click:Connect(function()
-	local char = player.Character
-	if savedPosition and char and char:FindFirstChild("HumanoidRootPart") then
-		char:MoveTo(savedPosition)
+	local title = Instance.new("TextLabel")
+	title.Size = UDim2.new(1,0,0,25)
+	title.BackgroundTransparency = 1
+	title.Text = "PIZZA GUI"
+	title.TextColor3 = Color3.fromRGB(255,165,0)
+	title.TextScaled = true
+	title.Font = Enum.Font.Fantasy
+	title.Parent = mainFrame
+
+	-- Saved position
+	local savedPosition = nil
+
+	-- Buttons
+	local saveButton = Instance.new("TextButton")
+	saveButton.Size = UDim2.new(0,90,0,30)
+	saveButton.Position = UDim2.new(0,10,0,55)
+	saveButton.Text = "Save Pos"
+	saveButton.TextScaled = true
+	saveButton.BackgroundColor3 = Color3.fromRGB(255,200,120)
+	saveButton.Parent = mainFrame
+	roundButton(saveButton)
+
+	local tpButton = Instance.new("TextButton")
+	tpButton.Size = UDim2.new(0,90,0,30)
+	tpButton.Position = UDim2.new(0,110,0,55)
+	tpButton.Text = "Teleport"
+	tpButton.TextScaled = true
+	tpButton.BackgroundColor3 = Color3.fromRGB(255,200,120)
+	tpButton.Parent = mainFrame
+	roundButton(tpButton)
+
+	local ragdollGlideButton = Instance.new("TextButton")
+	ragdollGlideButton.Size = UDim2.new(0,190,0,30)
+	ragdollGlideButton.Position = UDim2.new(0,10,0,95)
+	ragdollGlideButton.Text = "Ragdoll & Glide"
+	ragdollGlideButton.TextScaled = true
+	ragdollGlideButton.BackgroundColor3 = Color3.fromRGB(255,200,120)
+	ragdollGlideButton.Parent = mainFrame
+	roundButton(ragdollGlideButton)
+
+	local autoGrabButton = Instance.new("TextButton")
+	autoGrabButton.Size = UDim2.new(0,190,0,30)
+	autoGrabButton.Position = UDim2.new(0,10,0,135)
+	autoGrabButton.Text = "Auto Grab: OFF"
+	autoGrabButton.TextScaled = true
+	autoGrabButton.BackgroundColor3 = Color3.fromRGB(255,150,50)
+	autoGrabButton.Parent = mainFrame
+	roundButton(autoGrabButton)
+
+	local batAuraButton = Instance.new("TextButton")
+	batAuraButton.Size = UDim2.new(0,190,0,30)
+	batAuraButton.Position = UDim2.new(0,10,0,175)
+	batAuraButton.Text = "Bat Aura: OFF"
+	batAuraButton.TextScaled = true
+	batAuraButton.BackgroundColor3 = Color3.fromRGB(60,0,0)
+	batAuraButton.TextColor3 = Color3.new(1,1,1)
+	batAuraButton.Parent = mainFrame
+	roundButton(batAuraButton)
+
+	local ragdollNoclipButton = Instance.new("TextButton")
+	ragdollNoclipButton.Size = UDim2.new(0,190,0,30)
+	ragdollNoclipButton.Position = UDim2.new(0,10,0,215)
+	ragdollNoclipButton.Text = "Ragdoll Noclip: OFF"
+	ragdollNoclipButton.TextScaled = true
+	ragdollNoclipButton.BackgroundColor3 = Color3.fromRGB(200,120,60)
+	ragdollNoclipButton.Parent = mainFrame
+	roundButton(ragdollNoclipButton)
+
+	-- Store motors for recover
+	local originalMotors = {}
+	local function storeMotors(character)
+		originalMotors = {}
+		for _, motor in pairs(character:GetDescendants()) do
+			if motor:IsA("Motor6D") then
+				table.insert(originalMotors, motor:Clone())
+			end
+		end
 	end
-end)
 
--- RAGDOLL GLIDE
-glideButton.MouseButton1Click:Connect(function()
+	-- Button functions
+	saveButton.MouseButton1Click:Connect(function()
+		local char = player.Character
+		if char and char:FindFirstChild("HumanoidRootPart") then
+			savedPosition = char.HumanoidRootPart.Position
+		end
+	end)
 
-	local char = player.Character
-	if not char then return end
-	local humanoid = char:FindFirstChild("Humanoid")
-	local root = char:FindFirstChild("HumanoidRootPart")
+	tpButton.MouseButton1Click:Connect(function()
+		local char = player.Character
+		if savedPosition and char and char:FindFirstChild("HumanoidRootPart") then
+			char:MoveTo(savedPosition)
+		end
+	end)
 
-	if humanoid and root and savedPosition then
-		glideActive = true
+	local function recover(character)
+		local humanoid = character:FindFirstChild("Humanoid")
+		if not humanoid then return end
+		if glideLoop then task.cancel(glideLoop); glideLoop=nil end
+		for _, att in pairs(character:GetDescendants()) do
+			if att:IsA("Attachment") or att:IsA("BallSocketConstraint") then att:Destroy() end
+		end
+		for _, motor in pairs(originalMotors) do
+			if motor.Parent==nil and character:FindFirstChild(motor.Part0.Name) then
+				motor.Parent = character:FindFirstChild(motor.Part0.Name)
+			end
+		end
+		humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+	end
+
+	local function ragdollGlide(character)
+		local humanoid = character:FindFirstChild("Humanoid")
+		if not humanoid or not savedPosition then return end
+		storeMotors(character)
 		humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-
-		task.spawn(function()
-			while glideActive do
-				local dir = (savedPosition-root.Position)
-				if dir.Magnitude < 3 then
-					glideActive = false
-					humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-					break
+		for _, motor in pairs(character:GetDescendants()) do
+			if motor:IsA("Motor6D") then
+				local a0 = Instance.new("Attachment")
+				local a1 = Instance.new("Attachment")
+				a0.Parent = motor.Part0
+				a1.Parent = motor.Part1
+				a0.CFrame = motor.C0
+				a1.CFrame = motor.C1
+				local socket = Instance.new("BallSocketConstraint")
+				socket.Attachment0 = a0
+				socket.Attachment1 = a1
+				socket.Parent = motor.Parent
+				motor:Destroy()
+			end
+		end
+		glideLoop = spawn(function()
+			while humanoid.Parent do
+				local root = character:FindFirstChild("HumanoidRootPart")
+				if root then
+					local dir = (savedPosition-root.Position)
+					if dir.Magnitude<2 then recover(character); break end
+					root.Velocity = dir.Unit*50
 				end
-				root.Velocity = dir.Unit * 60
-				task.wait()
+				task.wait(0.05)
 			end
 		end)
 	end
 
-end)
-
--- RECOVER
-recoverButton.MouseButton1Click:Connect(function()
-
-	local char = player.Character
-	if not char then return end
-
-	local humanoid = char:FindFirstChild("Humanoid")
-	if humanoid then
-		glideActive = false
-		ragdollNoclipEnabled = false
-		humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-	end
-
-end)
-
--- AUTO GRAB
-autoGrabButton.MouseButton1Click:Connect(function()
-
-	autoGrabEnabled = not autoGrabEnabled
-	autoGrabButton.Text = autoGrabEnabled and "Auto Grab: ON" or "Auto Grab: OFF"
-
-end)
-
--- BAT AURA
-batAuraButton.MouseButton1Click:Connect(function()
-
-	batAuraEnabled = not batAuraEnabled
-	batAuraButton.Text = batAuraEnabled and "Bat Aura: ON" or "Bat Aura: OFF"
-
-end)
-
--- RAGDOLL NOCLIP
-ragdollNoclipButton.MouseButton1Click:Connect(function()
-
-	ragdollNoclipEnabled = not ragdollNoclipEnabled
-
-	local char = player.Character
-	if not char then return end
-	local humanoid = char:FindFirstChild("Humanoid")
-
-	if ragdollNoclipEnabled then
-		ragdollNoclipButton.Text = "Ragdoll Noclip: ON"
-		if humanoid then humanoid:ChangeState(Enum.HumanoidStateType.Physics) end
-	else
-		ragdollNoclipButton.Text = "Ragdoll Noclip: OFF"
-		if humanoid then humanoid:ChangeState(Enum.HumanoidStateType.GettingUp) end
-	end
-
-end)
-
--- AUTO GRAB KEY
-UIS.InputBegan:Connect(function(input,gp)
-
-	if gp then return end
-
-	if input.KeyCode == Enum.KeyCode.F and autoGrabEnabled then
-
+	-- Ragdoll & Glide
+	ragdollGlideButton.MouseButton1Click:Connect(function()
 		local char = player.Character
-		if not char then return end
-		local root = char:FindFirstChild("HumanoidRootPart")
-		if not root then return end
+		if char then ragdollGlide(char) end
+	end)
 
-		for _,v in pairs(workspace:GetDescendants()) do
-			if v.Name:lower():find("brainrot") and v:IsA("BasePart") then
-				if (v.Position-root.Position).Magnitude < 8 then
-					firetouchinterest(root,v,0)
-					firetouchinterest(root,v,1)
+	-- Auto Grab
+	autoGrabButton.MouseButton1Click:Connect(function()
+		autoGrabEnabled = not autoGrabEnabled
+		autoGrabButton.Text = autoGrabEnabled and "Auto Grab: ON" or "Auto Grab: OFF"
+	end)
+
+	-- Bat Aura
+	local auraPart
+	batAuraButton.MouseButton1Click:Connect(function()
+		batAuraEnabled = not batAuraEnabled
+		batAuraButton.Text = batAuraEnabled and "Bat Aura: ON" or "Bat Aura: OFF"
+		if not batAuraEnabled and auraPart then auraPart:Destroy(); auraPart=nil end
+	end)
+
+	-- Ragdoll Noclip
+	ragdollNoclipButton.MouseButton1Click:Connect(function()
+		ragdollNoclipEnabled = not ragdollNoclipEnabled
+		local char = player.Character
+		if char then
+			local humanoid = char:FindFirstChild("Humanoid")
+			if humanoid then
+				if ragdollNoclipEnabled then
+					ragdollNoclipButton.Text="Ragdoll Noclip: ON"
+					humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+				else
+					ragdollNoclipButton.Text="Ragdoll Noclip: OFF"
+					humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+					for _,p in pairs(char:GetDescendants()) do
+						if p:IsA("BasePart") then p.CanCollide=true end
+					end
 				end
 			end
 		end
+	end)
 
-	end
-
-end)
-
--- MAIN LOOP
-RunService.Heartbeat:Connect(function()
-
-	local char = player.Character
-	if not char then return end
-
-	local humanoid = char:FindFirstChild("Humanoid")
-	local root = char:FindFirstChild("HumanoidRootPart")
-	if not humanoid or not root then return end
-
-	-- RAGDOLL NOCLIP MOVEMENT
-	if ragdollNoclipEnabled then
-
-		if humanoid:GetState() ~= Enum.HumanoidStateType.Physics then
-			humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-		end
-
-		for _,part in pairs(char:GetDescendants()) do
-			if part:IsA("BasePart") then
-				part.CanCollide = false
-			end
-		end
-
-		local move = Vector3.zero
-		local cam = workspace.CurrentCamera
-
-		if UIS:IsKeyDown(Enum.KeyCode.W) then
-			move += cam.CFrame.LookVector
-		end
-		if UIS:IsKeyDown(Enum.KeyCode.S) then
-			move -= cam.CFrame.LookVector
-		end
-		if UIS:IsKeyDown(Enum.KeyCode.A) then
-			move -= cam.CFrame.RightVector
-		end
-		if UIS:IsKeyDown(Enum.KeyCode.D) then
-			move += cam.CFrame.RightVector
-		end
-
-		move = Vector3.new(move.X,0,move.Z)
-
-		if move.Magnitude > 0 then
-			local vel = move.Unit * 45
-			root.Velocity = root.Velocity:Lerp(vel,0.25)
-		else
-			root.Velocity = root.Velocity * 0.8
-		end
-
-	end
-
-	-- BAT AURA
-	if batAuraEnabled then
-		for _,plr in pairs(game.Players:GetPlayers()) do
-			if plr ~= player then
-				local c = plr.Character
-				if c and c:FindFirstChild("HumanoidRootPart") then
-					if (c.HumanoidRootPart.Position-root.Position).Magnitude < 10 then
-						local tool = char:FindFirstChildOfClass("Tool")
-						if tool then
-							tool:Activate()
+	-- Auto Grab logic (F)
+	UserInputService.InputBegan:Connect(function(input, gameProcessed)
+		if gameProcessed then return end
+		if input.KeyCode==Enum.KeyCode.F and autoGrabEnabled then
+			local char = player.Character
+			if char then
+				local root = char:FindFirstChild("HumanoidRootPart")
+				if root then
+					for _, obj in pairs(workspace:GetChildren()) do
+						if obj.Name=="BrainRot" and (obj.Position-root.Position).Magnitude<5 then
+							if obj:FindFirstChild("ClickDetector") then obj.ClickDetector:FireClick(player) end
 						end
 					end
 				end
 			end
 		end
-	end
+	end)
 
-end)
+	-- RunService loop
+	RunService.Heartbeat:Connect(function()
+		local char = player.Character
+		if not char then return end
+		local root = char:FindFirstChild("HumanoidRootPart")
+		if not root then return end
+
+		-- Ragdoll Noclip movement
+		if ragdollNoclipEnabled then
+			for _,part in pairs(char:GetDescendants()) do
+				if part:IsA("BasePart") then part.CanCollide=false end
+			end
+			local moveDir=Vector3.zero
+			if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir+=workspace.CurrentCamera.CFrame.LookVector end
+			if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir-=workspace.CurrentCamera.CFrame.LookVector end
+			if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir-=workspace.CurrentCamera.CFrame.RightVector end
+			if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir+=workspace.CurrentCamera.CFrame.RightVector end
+			if moveDir.Magnitude>0 then root.Velocity=moveDir.Unit*40 end
+		end
+
+		-- Bat Aura
+		if batAuraEnabled then
+			if not auraPart then
+				auraPart=Instance.new("Part")
+				auraPart.Shape=Enum.PartType.Cylinder
+				auraPart.Size=Vector3.new(0.2,auraRadius*2,auraRadius*2)
+				auraPart.Color=Color3.fromRGB(255,0,0)
+				auraPart.Transparency=0.5
+				auraPart.Anchored=true
+				auraPart.CanCollide=false
+				auraPart.Parent=workspace
+			end
+			auraPart.CFrame=root.CFrame*CFrame.Angles(math.rad(90),0,0)
+			for _,plr in pairs(game.Players:GetPlayers()) do
+				if plr~=player then
+					local enemyChar=plr.Character
+					if enemyChar and enemyChar:FindFirstChild("HumanoidRootPart") then
+						local dist=(enemyChar.HumanoidRootPart.Position-root.Position).Magnitude
+						if dist<=auraRadius then
+							local tool=char:FindFirstChildOfClass("Tool")
+							if tool then tool:Activate() end
+						end
+					end
+				end
+			end
+		elseif auraPart then auraPart:Destroy(); auraPart=nil end
+	end)
+end
+
+createPizzaGUI()
+player.CharacterAdded:Connect(function() task.wait(1); createPizzaGUI() end)
