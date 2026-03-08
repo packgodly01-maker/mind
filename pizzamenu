@@ -1,6 +1,7 @@
 local player = game.Players.LocalPlayer
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local playerGui = player:WaitForChild("PlayerGui")
 
@@ -9,9 +10,7 @@ local START_SOUND = "rbxassetid://5732294340"
 
 -- remove old gui
 local old = playerGui:FindFirstChild("PizzaGUI")
-if old then
-	old:Destroy()
-end
+if old then old:Destroy() end
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "PizzaGUI"
@@ -30,7 +29,7 @@ local function playClick()
 	clickSound:Play()
 end
 
--- notification
+-- notification system
 local function notify(text,y)
 
 	local frame = Instance.new("Frame")
@@ -65,20 +64,36 @@ notify("THANK YOU for using Pizza Menu 🍕",0)
 task.wait(.4)
 notify("OWNERS: cmp4s , kolletkloudsyt",0.08)
 
--- OPEN BUTTON (pizza decal)
-local openButton = Instance.new("ImageButton")
-openButton.Name = "OpenPizzaButton"
-openButton.Size = UDim2.new(0,60,0,60)
-openButton.Position = UDim2.new(0,20,1,-80)
+-------------------------------------------------
+-- PIZZA BUTTON
+-------------------------------------------------
+
+local openHolder = Instance.new("Frame")
+openHolder.Size = UDim2.new(0,60,0,60)
+openHolder.Position = UDim2.new(0,20,1,-80)
+openHolder.BackgroundTransparency = 1
+openHolder.Parent = gui
+
+local pizzaImage = Instance.new("ImageLabel")
+pizzaImage.Size = UDim2.new(1,0,1,0)
+pizzaImage.BackgroundTransparency = 1
+pizzaImage.Image = "rbxassetid://5822600836"
+pizzaImage.Parent = openHolder
+
+local openButton = Instance.new("TextButton")
+openButton.Size = UDim2.new(1,0,1,0)
 openButton.BackgroundTransparency = 1
-openButton.Image = "rbxassetid://5822600836"
-openButton.Parent = gui
+openButton.Text = ""
+openButton.Parent = openHolder
 
-local buttonCorner = Instance.new("UICorner")
-buttonCorner.CornerRadius = UDim.new(1,0)
-buttonCorner.Parent = openButton
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(1,0)
+corner.Parent = openHolder
 
--- drag system
+-------------------------------------------------
+-- DRAGGING
+-------------------------------------------------
+
 local dragging=false
 local dragStart
 local startPos
@@ -87,7 +102,7 @@ openButton.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 then
 		dragging=true
 		dragStart=input.Position
-		startPos=openButton.Position
+		startPos=openHolder.Position
 	end
 end)
 
@@ -100,11 +115,14 @@ end)
 UIS.InputChanged:Connect(function(input)
 	if dragging and input.UserInputType==Enum.UserInputType.MouseMovement then
 		local delta=input.Position-dragStart
-		openButton.Position=UDim2.new(startPos.X.Scale,startPos.X.Offset+delta.X,startPos.Y.Scale,startPos.Y.Offset+delta.Y)
+		openHolder.Position=UDim2.new(startPos.X.Scale,startPos.X.Offset+delta.X,startPos.Y.Scale,startPos.Y.Offset+delta.Y)
 	end
 end)
 
+-------------------------------------------------
 -- MAIN MENU
+-------------------------------------------------
+
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0,240,0,320)
 frame.Position = UDim2.new(.5,-120,.5,-160)
@@ -116,12 +134,7 @@ frame.Parent=gui
 
 Instance.new("UICorner",frame)
 
-openButton.MouseButton1Click:Connect(function()
-	playClick()
-	frame.Visible = not frame.Visible
-end)
-
--- TITLE
+-- title
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1,0,0,30)
 title.BackgroundTransparency = 1
@@ -131,7 +144,47 @@ title.Font = Enum.Font.Fantasy
 title.TextColor3 = Color3.fromRGB(255,165,0)
 title.Parent = frame
 
--- button creator
+-------------------------------------------------
+-- BUTTON BOUNCE
+-------------------------------------------------
+
+local function bounce()
+
+	local shrink = TweenService:Create(
+		openHolder,
+		TweenInfo.new(0.08),
+		{Size = UDim2.new(0,50,0,50)}
+	)
+
+	local grow = TweenService:Create(
+		openHolder,
+		TweenInfo.new(0.08),
+		{Size = UDim2.new(0,60,0,60)}
+	)
+
+	shrink:Play()
+	shrink.Completed:Wait()
+	grow:Play()
+
+end
+
+-------------------------------------------------
+-- OPEN MENU
+-------------------------------------------------
+
+openButton.MouseButton1Click:Connect(function()
+
+	playClick()
+	bounce()
+
+	frame.Visible = not frame.Visible
+
+end)
+
+-------------------------------------------------
+-- BUTTON CREATOR
+-------------------------------------------------
+
 local function makeButton(text,y)
 
 	local b = Instance.new("TextButton")
@@ -153,10 +206,13 @@ local saveButton = makeButton("Save Pos",50)
 local tpButtonMain = makeButton("Teleport",90)
 local wallTPButton = makeButton("Wall TP",130)
 
+-------------------------------------------------
+-- SAVE POS
+-------------------------------------------------
+
 local savedPosition
 local savedMarker
 
--- SAVE POS
 saveButton.MouseButton1Click:Connect(function()
 
 	local char = player.Character
@@ -182,7 +238,10 @@ saveButton.MouseButton1Click:Connect(function()
 
 end)
 
+-------------------------------------------------
 -- TELEPORT
+-------------------------------------------------
+
 tpButtonMain.MouseButton1Click:Connect(function()
 
 	local char = player.Character
@@ -194,7 +253,10 @@ tpButtonMain.MouseButton1Click:Connect(function()
 
 end)
 
+-------------------------------------------------
 -- WALL TP
+-------------------------------------------------
+
 local wallTPEnabled=false
 local wallBall
 local tpButton
