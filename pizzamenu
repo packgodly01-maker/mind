@@ -27,7 +27,7 @@ local function createPizzaGUI()
 	openButton.Size = UDim2.new(0,60,0,60)
 	openButton.Position = UDim2.new(0,20,1,-80)
 	openButton.BackgroundTransparency = 1
-	openButton.Image = "rbxassetid://5822600836"
+	openButton.Image = "https://www.roblox.com/asset-thumbnail/image?assetId=5822600836&width=420&height=420&format=png"
 	openButton.Parent = screenGui
 
 	-- MAIN FRAME
@@ -243,7 +243,6 @@ local function createPizzaGUI()
 
 	end)
 
-	-- MAIN LOOP
 	RunService.Heartbeat:Connect(function()
 
 		local char=player.Character
@@ -253,7 +252,6 @@ local function createPizzaGUI()
 		local humanoid=char:FindFirstChild("Humanoid")
 		if not root or not humanoid then return end
 
-		-- RAGDOLL NOCLIP
 		if ragdollNoclipEnabled then
 
 			if humanoid:GetState()~=Enum.HumanoidStateType.Physics then
