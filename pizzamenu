@@ -4,11 +4,10 @@ local RunService = game:GetService("RunService")
 
 local playerGui = player:WaitForChild("PlayerGui")
 
--- sound ids
 local CLICK_SOUND = "rbxassetid://138470560522298"
 local START_SOUND = "rbxassetid://5732294340"
 
--- delete old gui if it exists
+-- remove old gui
 local old = playerGui:FindFirstChild("PizzaGUI")
 if old then
 	old:Destroy()
@@ -20,20 +19,18 @@ gui.ResetOnSpawn = false
 gui.Parent = playerGui
 
 -- sounds
-local clickSound = Instance.new("Sound")
+local clickSound = Instance.new("Sound",gui)
 clickSound.SoundId = CLICK_SOUND
-clickSound.Parent = gui
 
-local startSound = Instance.new("Sound")
+local startSound = Instance.new("Sound",gui)
 startSound.SoundId = START_SOUND
-startSound.Parent = gui
 startSound:Play()
 
 local function playClick()
 	clickSound:Play()
 end
 
--- notifications
+-- notification
 local function notify(text,y)
 
 	local frame = Instance.new("Frame")
@@ -68,13 +65,18 @@ notify("THANK YOU for using Pizza Menu 🍕",0)
 task.wait(.4)
 notify("OWNERS: cmp4s , kolletkloudsyt",0.08)
 
--- pizza open button
+-- OPEN BUTTON (pizza decal)
 local openButton = Instance.new("ImageButton")
+openButton.Name = "OpenPizzaButton"
 openButton.Size = UDim2.new(0,60,0,60)
 openButton.Position = UDim2.new(0,20,1,-80)
 openButton.BackgroundTransparency = 1
-openButton.Image = "rbxassetid://13482320790" -- reliable pizza icon
+openButton.Image = "rbxassetid://5822600836"
 openButton.Parent = gui
+
+local buttonCorner = Instance.new("UICorner")
+buttonCorner.CornerRadius = UDim.new(1,0)
+buttonCorner.Parent = openButton
 
 -- drag system
 local dragging=false
@@ -102,7 +104,7 @@ UIS.InputChanged:Connect(function(input)
 	end
 end)
 
--- main menu
+-- MAIN MENU
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0,240,0,320)
 frame.Position = UDim2.new(.5,-120,.5,-160)
@@ -119,7 +121,7 @@ openButton.MouseButton1Click:Connect(function()
 	frame.Visible = not frame.Visible
 end)
 
--- title
+-- TITLE
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1,0,0,30)
 title.BackgroundTransparency = 1
@@ -129,7 +131,7 @@ title.Font = Enum.Font.Fantasy
 title.TextColor3 = Color3.fromRGB(255,165,0)
 title.Parent = frame
 
--- button maker
+-- button creator
 local function makeButton(text,y)
 
 	local b = Instance.new("TextButton")
@@ -154,7 +156,7 @@ local wallTPButton = makeButton("Wall TP",130)
 local savedPosition
 local savedMarker
 
--- save position
+-- SAVE POS
 saveButton.MouseButton1Click:Connect(function()
 
 	local char = player.Character
@@ -180,7 +182,7 @@ saveButton.MouseButton1Click:Connect(function()
 
 end)
 
--- teleport
+-- TELEPORT
 tpButtonMain.MouseButton1Click:Connect(function()
 
 	local char = player.Character
@@ -192,7 +194,7 @@ tpButtonMain.MouseButton1Click:Connect(function()
 
 end)
 
--- wall tp
+-- WALL TP
 local wallTPEnabled=false
 local wallBall
 local tpButton
