@@ -1,17 +1,16 @@
 local player = game.Players.LocalPlayer
-local glideLoop = nil
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
 local autoGrabEnabled = false
 local batAuraEnabled = false
-local auraRadius = 10
 local ragdollNoclipEnabled = false
-local savedMarker = nil
 
 local wallTPEnabled = false
 local wallBall = nil
 local tpButton = nil
 
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
+local savedMarker = nil
 
 local function createPizzaGUI()
 
@@ -28,9 +27,38 @@ local function createPizzaGUI()
 	openButton.Position = UDim2.new(0,20,1,-80)
 	openButton.BackgroundTransparency = 1
 	openButton.Image = "https://www.roblox.com/asset-thumbnail/image?assetId=5822600836&width=420&height=420&format=png"
-	openButton.Active = true
-	openButton.Draggable = true
 	openButton.Parent = screenGui
+
+	-- DRAG SYSTEM
+	local dragging = false
+	local dragStart
+	local startPos
+
+	openButton.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+			dragStart = input.Position
+			startPos = openButton.Position
+		end
+	end)
+
+	openButton.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = false
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+			local delta = input.Position - dragStart
+			openButton.Position = UDim2.new(
+				startPos.X.Scale,
+				startPos.X.Offset + delta.X,
+				startPos.Y.Scale,
+				startPos.Y.Offset + delta.Y
+			)
+		end
+	end)
 
 	-- MAIN FRAME
 	local mainFrame = Instance.new("Frame")
@@ -65,7 +93,7 @@ local function createPizzaGUI()
 	title.Font = Enum.Font.Fantasy
 	title.Parent = mainFrame
 
-	-- TAB BUTTONS
+	-- TABS
 	local mainTab = Instance.new("TextButton")
 	mainTab.Size = UDim2.new(0.5,0,0,25)
 	mainTab.Position = UDim2.new(0,0,0,25)
@@ -81,7 +109,6 @@ local function createPizzaGUI()
 	roundButton(mainTab)
 	roundButton(coolTab)
 
-	-- PAGES
 	local mainPage = Instance.new("Frame")
 	mainPage.Size = UDim2.new(1,0,1,-50)
 	mainPage.Position = UDim2.new(0,0,0,50)
@@ -105,7 +132,6 @@ local function createPizzaGUI()
 		coolPage.Visible = true
 	end)
 
-	-- BUTTON MAKER
 	local function makeButton(text,y,parent)
 		local b = Instance.new("TextButton")
 		b.Size = UDim2.new(0,200,0,30)
@@ -122,14 +148,11 @@ local function createPizzaGUI()
 
 	local saveButton = makeButton("Save Pos",10,mainPage)
 	local tpButtonMain = makeButton("Teleport",50,mainPage)
-	local ragdollGlideButton = makeButton("Ragdoll Glide",90,mainPage)
-	local autoGrabButton = makeButton("Auto Grab: OFF",130,mainPage)
-	local batAuraButton = makeButton("Bat Aura: OFF",170,mainPage)
-	local ragdollNoclipButton = makeButton("Ragdoll Noclip: OFF",210,mainPage)
+	local ragdollNoclipButton = makeButton("Ragdoll Noclip: OFF",90,mainPage)
 
 	local wallTPButton = makeButton("Wall TP",10,coolPage)
 
-	-- SAVE POS
+	-- SAVE POSITION
 	saveButton.MouseButton1Click:Connect(function()
 
 		local char=player.Character
@@ -163,74 +186,54 @@ local function createPizzaGUI()
 		end
 	end)
 
-	-- AUTO GRAB
-	autoGrabButton.MouseButton1Click:Connect(function()
-		autoGrabEnabled=not autoGrabEnabled
-		autoGrabButton.Text=autoGrabEnabled and "Auto Grab: ON" or "Auto Grab: OFF"
-	end)
-
-	-- BAT AURA
-	batAuraButton.MouseButton1Click:Connect(function()
-		batAuraEnabled=not batAuraEnabled
-		batAuraButton.Text=batAuraEnabled and "Bat Aura: ON" or "Bat Aura: OFF"
-	end)
-
 	-- RAGDOLL NOCLIP
 	ragdollNoclipButton.MouseButton1Click:Connect(function()
 
 		ragdollNoclipEnabled=not ragdollNoclipEnabled
-		local char=player.Character
-		if char then
-			local humanoid=char:FindFirstChild("Humanoid")
 
-			if ragdollNoclipEnabled then
-				ragdollNoclipButton.Text="Ragdoll Noclip: ON"
-				if humanoid then humanoid:ChangeState(Enum.HumanoidStateType.Physics) end
-			else
-				ragdollNoclipButton.Text="Ragdoll Noclip: OFF"
-				if humanoid then humanoid:ChangeState(Enum.HumanoidStateType.GettingUp) end
-			end
-
-		end
+		ragdollNoclipButton.Text = ragdollNoclipEnabled and "Ragdoll Noclip: ON" or "Ragdoll Noclip: OFF"
 
 	end)
 
 	-- WALL TP
 	wallTPButton.MouseButton1Click:Connect(function()
 
-		wallTPEnabled=not wallTPEnabled
+		wallTPEnabled = not wallTPEnabled
 
 		if wallTPEnabled then
 
-			local char=player.Character
-			local root=char and char:FindFirstChild("HumanoidRootPart")
+			local char = player.Character
+			local root = char and char:FindFirstChild("HumanoidRootPart")
 
 			if root then
 
-				wallBall=Instance.new("Part")
-				wallBall.Shape=Enum.PartType.Ball
-				wallBall.Size=Vector3.new(2,2,2)
-				wallBall.Color=Color3.fromRGB(255,117,24)
-				wallBall.Material=Enum.Material.Neon
-				wallBall.Anchored=true
-				wallBall.CanCollide=false
-				wallBall.Parent=workspace
+				wallBall = Instance.new("Part")
+				wallBall.Shape = Enum.PartType.Ball
+				wallBall.Size = Vector3.new(2,2,2)
+				wallBall.Color = Color3.fromRGB(255,117,24)
+				wallBall.Material = Enum.Material.Neon
+				wallBall.Anchored = true
+				wallBall.CanCollide = false
+				wallBall.Parent = workspace
 
-				tpButton=Instance.new("TextButton")
-				tpButton.Text="TP INSIDE"
-				tpButton.Size=UDim2.new(0,160,0,50)
-				tpButton.Position=UDim2.new(0.5,-80,0.8,0)
-				tpButton.BackgroundColor3=Color3.fromRGB(40,120,255)
-				tpButton.TextScaled=true
-				tpButton.Parent=screenGui
+				tpButton = Instance.new("TextButton")
+				tpButton.Text = "TP INSIDE"
+				tpButton.Size = UDim2.new(0,160,0,50)
+				tpButton.Position = UDim2.new(0.5,-80,0.8,0)
+				tpButton.BackgroundColor3 = Color3.fromRGB(40,120,255)
+				tpButton.TextScaled = true
+				tpButton.Parent = screenGui
 				roundButton(tpButton)
 
 				tpButton.MouseButton1Click:Connect(function()
-					local char=player.Character
-					local root=char and char:FindFirstChild("HumanoidRootPart")
+
+					local char = player.Character
+					local root = char and char:FindFirstChild("HumanoidRootPart")
+
 					if root and wallBall then
-						root.CFrame=CFrame.new(wallBall.Position)
+						root.CFrame = CFrame.new(wallBall.Position)
 					end
+
 				end)
 
 			end
@@ -246,40 +249,28 @@ local function createPizzaGUI()
 
 	RunService.Heartbeat:Connect(function()
 
-		local char=player.Character
+		local char = player.Character
 		if not char then return end
 
-		local root=char:FindFirstChild("HumanoidRootPart")
-		local humanoid=char:FindFirstChild("Humanoid")
+		local root = char:FindFirstChild("HumanoidRootPart")
+		local humanoid = char:FindFirstChild("Humanoid")
+
 		if not root or not humanoid then return end
 
-		-- WALL BALL FOLLOW PLAYER
+		-- WALL BALL FOLLOW
 		if wallTPEnabled and wallBall then
-			wallBall.Position = root.Position + root.CFrame.LookVector * 10
+			wallBall.Position = root.Position + (root.CFrame.LookVector * 8)
 		end
 
+		-- RAGDOLL NOCLIP
 		if ragdollNoclipEnabled then
 
-			if humanoid:GetState()~=Enum.HumanoidStateType.Physics then
-				humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-			end
+			humanoid:ChangeState(Enum.HumanoidStateType.Physics)
 
 			for _,part in pairs(char:GetDescendants()) do
-				if part:IsA("BasePart") then part.CanCollide=false end
-			end
-
-			local cam=workspace.CurrentCamera
-			local moveDir=Vector3.zero
-
-			if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir+=cam.CFrame.LookVector end
-			if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir-=cam.CFrame.LookVector end
-			if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir-=cam.CFrame.RightVector end
-			if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir+=cam.CFrame.RightVector end
-
-			moveDir=Vector3.new(moveDir.X,0,moveDir.Z)
-
-			if moveDir.Magnitude>0 then
-				root.Velocity=root.Velocity:Lerp(moveDir.Unit*45,0.25)
+				if part:IsA("BasePart") then
+					part.CanCollide = false
+				end
 			end
 
 		end
@@ -289,6 +280,7 @@ local function createPizzaGUI()
 end
 
 createPizzaGUI()
+
 player.CharacterAdded:Connect(function()
 	task.wait(1)
 	createPizzaGUI()
