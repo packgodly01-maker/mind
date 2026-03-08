@@ -1,34 +1,33 @@
 local player = game.Players.LocalPlayer
-local UserInputService = game:GetService("UserInputService")
+local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
--- SOUND IDS
+-- sounds
 local CLICK_SOUND = "rbxassetid://138470560522298"
 local START_SOUND = "rbxassetid://5732294340"
 
 local wallTPEnabled = false
 local wallBall = nil
 local tpButton = nil
-local savedMarker = nil
+
 local savedPosition = nil
+local savedMarker = nil
 
 local function createPizzaGUI()
 
 	if player.PlayerGui:FindFirstChild("PizzaGUI") then return end
 
-	local screenGui = Instance.new("ScreenGui")
-	screenGui.Name = "PizzaGUI"
-	screenGui.ResetOnSpawn = false
-	screenGui.Parent = player.PlayerGui
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "PizzaGUI"
+	gui.ResetOnSpawn = false
+	gui.Parent = player.PlayerGui
 
 	-- sounds
-	local clickSound = Instance.new("Sound",screenGui)
+	local clickSound = Instance.new("Sound",gui)
 	clickSound.SoundId = CLICK_SOUND
-	clickSound.Volume = 1
 
-	local startSound = Instance.new("Sound",screenGui)
+	local startSound = Instance.new("Sound",gui)
 	startSound.SoundId = START_SOUND
-	startSound.Volume = 1
 	startSound:Play()
 
 	local function playClick()
@@ -42,7 +41,7 @@ local function createPizzaGUI()
 		frame.Size = UDim2.new(0,260,0,50)
 		frame.Position = UDim2.new(1,300,0.25+y,0)
 		frame.BackgroundColor3 = Color3.fromRGB(255,117,24)
-		frame.Parent = screenGui
+		frame.Parent = gui
 
 		Instance.new("UICorner",frame)
 
@@ -50,125 +49,106 @@ local function createPizzaGUI()
 		label.Size = UDim2.new(1,-10,1,-10)
 		label.Position = UDim2.new(0,5,0,5)
 		label.BackgroundTransparency = 1
-		label.TextColor3 = Color3.new(1,1,1)
 		label.TextScaled = true
 		label.Font = Enum.Font.Fantasy
+		label.TextColor3 = Color3.new(1,1,1)
 		label.Text = text
 		label.Parent = frame
 
-		frame:TweenPosition(UDim2.new(1,-270,0.25+y,0),"Out","Quad",0.6,true)
+		frame:TweenPosition(UDim2.new(1,-270,0.25+y,0),"Out","Quad",0.5,true)
 
 		task.delay(4,function()
-			frame:TweenPosition(UDim2.new(1,300,0.25+y,0),"In","Quad",0.6,true)
-			task.wait(0.6)
+			frame:TweenPosition(UDim2.new(1,300,0.25+y,0),"In","Quad",0.5,true)
+			task.wait(.5)
 			frame:Destroy()
 		end)
 
 	end
 
 	notify("THANK YOU for using Pizza Menu 🍕",0)
-	task.wait(0.5)
+	task.wait(.4)
 	notify("OWNERS: cmp4s , kolletkloudsyt",0.08)
 
 	-- open button
-	local openButton = Instance.new("ImageButton")
-	openButton.Size = UDim2.new(0,60,0,60)
-	openButton.Position = UDim2.new(0,20,1,-80)
-	openButton.BackgroundTransparency = 1
-	openButton.Image = "rbxassetid://5822600836"
-	openButton.Parent = screenGui
+	local open = Instance.new("ImageButton")
+	open.Size = UDim2.new(0,60,0,60)
+	open.Position = UDim2.new(0,20,1,-80)
+	open.BackgroundTransparency = 1
+	open.Image = "rbxassetid://5822600836"
+	open.Parent = gui
 
-	-- dragging
+	-- drag
 	local dragging=false
-	local dragStart
-	local startPos
+	local dragStart,startPos
 
-	openButton.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+	open.InputBegan:Connect(function(input)
+		if input.UserInputType==Enum.UserInputType.MouseButton1 then
 			dragging=true
 			dragStart=input.Position
-			startPos=openButton.Position
+			startPos=open.Position
 		end
 	end)
 
-	openButton.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+	open.InputEnded:Connect(function(input)
+		if input.UserInputType==Enum.UserInputType.MouseButton1 then
 			dragging=false
 		end
 	end)
 
-	UserInputService.InputChanged:Connect(function(input)
-		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+	UIS.InputChanged:Connect(function(input)
+		if dragging and input.UserInputType==Enum.UserInputType.MouseMovement then
 			local delta=input.Position-dragStart
-			openButton.Position=UDim2.new(startPos.X.Scale,startPos.X.Offset+delta.X,startPos.Y.Scale,startPos.Y.Offset+delta.Y)
+			open.Position=UDim2.new(startPos.X.Scale,startPos.X.Offset+delta.X,startPos.Y.Scale,startPos.Y.Offset+delta.Y)
 		end
 	end)
 
 	-- main frame
-	local mainFrame = Instance.new("Frame")
-	mainFrame.Size = UDim2.new(0,240,0,320)
-	mainFrame.Position = UDim2.new(0.5,-120,0.5,-160)
-	mainFrame.BackgroundColor3 = Color3.fromRGB(255,117,24)
-	mainFrame.Visible = false
-	mainFrame.Active = true
-	mainFrame.Draggable = true
-	mainFrame.Parent = screenGui
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.new(0,240,0,320)
+	frame.Position = UDim2.new(.5,-120,.5,-160)
+	frame.BackgroundColor3 = Color3.fromRGB(255,117,24)
+	frame.Visible=false
+	frame.Active=true
+	frame.Draggable=true
+	frame.Parent=gui
 
-	Instance.new("UICorner",mainFrame)
+	Instance.new("UICorner",frame)
 
-	openButton.MouseButton1Click:Connect(function()
+	open.MouseButton1Click:Connect(function()
 		playClick()
-		mainFrame.Visible = not mainFrame.Visible
+		frame.Visible=not frame.Visible
 	end)
 
-	local function roundButton(btn)
-		Instance.new("UICorner",btn)
-		btn.MouseButton1Click:Connect(playClick)
-	end
+	local function makeButton(text,y)
 
-	-- title
-	local title = Instance.new("TextLabel")
-	title.Size = UDim2.new(1,0,0,25)
-	title.BackgroundTransparency = 1
-	title.Text = "PIZZA GUI"
-	title.TextColor3 = Color3.fromRGB(255,165,0)
-	title.TextScaled = true
-	title.Font = Enum.Font.Fantasy
-	title.Parent = mainFrame
+		local b=Instance.new("TextButton")
+		b.Size=UDim2.new(0,200,0,30)
+		b.Position=UDim2.new(0,20,0,y)
+		b.Text=text
+		b.BackgroundColor3=Color3.fromRGB(255,200,120)
+		b.TextScaled=true
+		b.Parent=frame
 
-	-- pages
-	local mainPage = Instance.new("Frame")
-	mainPage.Size = UDim2.new(1,0,1,-50)
-	mainPage.Position = UDim2.new(0,0,0,50)
-	mainPage.BackgroundTransparency = 1
-	mainPage.Parent = mainFrame
+		Instance.new("UICorner",b)
 
-	local function makeButton(text,y,parent)
-
-		local b = Instance.new("TextButton")
-		b.Size = UDim2.new(0,200,0,30)
-		b.Position = UDim2.new(0,20,0,y)
-		b.Text = text
-		b.BackgroundColor3 = Color3.fromRGB(255,200,120)
-		b.TextScaled = true
-		b.Parent = parent
-
-		roundButton(b)
+		b.MouseButton1Click:Connect(playClick)
 
 		return b
 	end
 
-	local saveButton = makeButton("Save Pos",10,mainPage)
-	local tpButtonMain = makeButton("Teleport",50,mainPage)
-	local wallTPButton = makeButton("Wall TP",90,mainPage)
+	local saveButton = makeButton("Save Pos",40)
+	local tpButtonMain = makeButton("Teleport",80)
+	local wallTPButton = makeButton("Wall TP",120)
 
-	-- SAVE POS
+	-- save pos
 	saveButton.MouseButton1Click:Connect(function()
 
 		local char=player.Character
-		if char and char:FindFirstChild("HumanoidRootPart") then
+		local root=char and char:FindFirstChild("HumanoidRootPart")
 
-			savedPosition=char.HumanoidRootPart.Position
+		if root then
+
+			savedPosition=root.Position
 
 			if savedMarker then savedMarker:Destroy() end
 
@@ -178,65 +158,62 @@ local function createPizzaGUI()
 			savedMarker.Position=savedPosition
 			savedMarker.Anchored=true
 			savedMarker.CanCollide=false
-			savedMarker.Color=Color3.fromRGB(255,117,24)
 			savedMarker.Material=Enum.Material.Neon
+			savedMarker.Color=Color3.fromRGB(255,117,24)
 			savedMarker.Parent=workspace
 
 		end
 
 	end)
 
-	-- TELEPORT
+	-- teleport
 	tpButtonMain.MouseButton1Click:Connect(function()
+
 		local char=player.Character
-		if savedPosition and char then
-			char:MoveTo(savedPosition)
+		local root=char and char:FindFirstChild("HumanoidRootPart")
+
+		if root and savedPosition then
+			root.CFrame=CFrame.new(savedPosition)
 		end
+
 	end)
 
-	-- WALL TP
+	-- wall tp toggle
 	wallTPButton.MouseButton1Click:Connect(function()
 
-		wallTPEnabled = not wallTPEnabled
+		wallTPEnabled=not wallTPEnabled
 
 		if wallTPEnabled then
 
-			local char = player.Character
-			local root = char and char:FindFirstChild("HumanoidRootPart")
+			wallBall=Instance.new("Part")
+			wallBall.Shape=Enum.PartType.Ball
+			wallBall.Size=Vector3.new(2,2,2)
+			wallBall.Anchored=true
+			wallBall.CanCollide=false
+			wallBall.Material=Enum.Material.Neon
+			wallBall.Color=Color3.fromRGB(255,117,24)
+			wallBall.Parent=workspace
 
-			if root then
+			tpButton=Instance.new("TextButton")
+			tpButton.Size=UDim2.new(0,160,0,50)
+			tpButton.Position=UDim2.new(.5,-80,.8,0)
+			tpButton.Text="TP INSIDE"
+			tpButton.TextScaled=true
+			tpButton.BackgroundColor3=Color3.fromRGB(40,120,255)
+			tpButton.Parent=gui
 
-				wallBall = Instance.new("Part")
-				wallBall.Shape = Enum.PartType.Ball
-				wallBall.Size = Vector3.new(2,2,2)
-				wallBall.Color = Color3.fromRGB(255,117,24)
-				wallBall.Material = Enum.Material.Neon
-				wallBall.Anchored = true
-				wallBall.CanCollide = false
-				wallBall.Parent = workspace
+			Instance.new("UICorner",tpButton)
 
-				tpButton = Instance.new("TextButton")
-				tpButton.Text = "TP INSIDE"
-				tpButton.Size = UDim2.new(0,160,0,50)
-				tpButton.Position = UDim2.new(0.5,-80,0.8,0)
-				tpButton.BackgroundColor3 = Color3.fromRGB(40,120,255)
-				tpButton.TextScaled = true
-				tpButton.Parent = screenGui
+			tpButton.MouseButton1Click:Connect(function()
 
-				Instance.new("UICorner",tpButton)
+				local char=player.Character
+				local root=char and char:FindFirstChild("HumanoidRootPart")
 
-				tpButton.MouseButton1Click:Connect(function()
+				if root and wallBall then
+					root.CFrame=CFrame.new(wallBall.Position)
+				end
 
-					local char = player.Character
-					local root = char and char:FindFirstChild("HumanoidRootPart")
-
-					if root and wallBall then
-						root.CFrame = CFrame.new(wallBall.Position)
-					end
-
-				end)
-
-			end
+			end)
 
 		else
 
@@ -247,16 +224,18 @@ local function createPizzaGUI()
 
 	end)
 
-	RunService.Heartbeat:Connect(function()
-
-		local char = player.Character
-		if not char then return end
-
-		local root = char:FindFirstChild("HumanoidRootPart")
-		if not root then return end
+	-- follow player
+	RunService.RenderStepped:Connect(function()
 
 		if wallTPEnabled and wallBall then
-			wallBall.Position = root.Position + (root.CFrame.LookVector * 3)
+
+			local char=player.Character
+			local root=char and char:FindFirstChild("HumanoidRootPart")
+
+			if root then
+				wallBall.Position=root.Position+(root.CFrame.LookVector*3)
+			end
+
 		end
 
 	end)
