@@ -1,322 +1,257 @@
 local player = game.Players.LocalPlayer
-local UIS = game:GetService("UserInputService")
+local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 
-local playerGui = player:WaitForChild("PlayerGui")
-
+-- SOUND IDS
 local CLICK_SOUND = "rbxassetid://138470560522298"
 local START_SOUND = "rbxassetid://5732294340"
 
--- remove old gui
-local old = playerGui:FindFirstChild("PizzaGUI")
-if old then old:Destroy() end
+local autoGrabEnabled = false
+local batAuraEnabled = false
+local ragdollNoclipEnabled = false
 
-local gui = Instance.new("ScreenGui")
-gui.Name = "PizzaGUI"
-gui.ResetOnSpawn = false
-gui.Parent = playerGui
+local wallTPEnabled = false
+local wallBall = nil
+local tpButton = nil
 
--- sounds
-local clickSound = Instance.new("Sound",gui)
-clickSound.SoundId = CLICK_SOUND
+local savedMarker = nil
 
-local startSound = Instance.new("Sound",gui)
-startSound.SoundId = START_SOUND
-startSound:Play()
+local function createPizzaGUI()
 
-local function playClick()
-	clickSound:Play()
-end
+	if player.PlayerGui:FindFirstChild("PizzaGUI") then return end
 
--- notification system
-local function notify(text,y)
+	local screenGui = Instance.new("ScreenGui")
+	screenGui.Name = "PizzaGUI"
+	screenGui.ResetOnSpawn = false
+	screenGui.Parent = player.PlayerGui
 
-	local frame = Instance.new("Frame")
-	frame.Size = UDim2.new(0,260,0,50)
-	frame.Position = UDim2.new(1,300,0.25+y,0)
-	frame.BackgroundColor3 = Color3.fromRGB(255,117,24)
-	frame.Parent = gui
+	-- CLICK SOUND OBJECT
+	local clickSound = Instance.new("Sound")
+	clickSound.SoundId = CLICK_SOUND
+	clickSound.Volume = 1
+	clickSound.Parent = screenGui
 
-	Instance.new("UICorner",frame)
+	local function playClick()
+		clickSound:Play()
+	end
 
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1,-10,1,-10)
-	label.Position = UDim2.new(0,5,0,5)
-	label.BackgroundTransparency = 1
-	label.TextScaled = true
-	label.Font = Enum.Font.Fantasy
-	label.TextColor3 = Color3.new(1,1,1)
-	label.Text = text
-	label.Parent = frame
+	-- STARTUP SOUND
+	local startSound = Instance.new("Sound")
+	startSound.SoundId = START_SOUND
+	startSound.Volume = 1
+	startSound.Parent = screenGui
+	startSound:Play()
 
-	frame:TweenPosition(UDim2.new(1,-270,0.25+y,0),"Out","Quad",0.5,true)
+	-- NOTIFICATION FUNCTION
+	local function notify(text, delayY)
 
-	task.delay(4,function()
-		frame:TweenPosition(UDim2.new(1,300,0.25+y,0),"In","Quad",0.5,true)
-		task.wait(.5)
-		frame:Destroy()
+		local notif = Instance.new("Frame")
+		notif.Size = UDim2.new(0,260,0,50)
+		notif.Position = UDim2.new(1,300,0.2 + delayY,0)
+		notif.BackgroundColor3 = Color3.fromRGB(255,117,24)
+		notif.Parent = screenGui
+
+		local corner = Instance.new("UICorner")
+		corner.Parent = notif
+
+		local label = Instance.new("TextLabel")
+		label.Size = UDim2.new(1,-10,1,-10)
+		label.Position = UDim2.new(0,5,0,5)
+		label.BackgroundTransparency = 1
+		label.TextColor3 = Color3.new(1,1,1)
+		label.TextScaled = true
+		label.Font = Enum.Font.Fantasy
+		label.Text = text
+		label.Parent = notif
+
+		notif:TweenPosition(UDim2.new(1,-270,0.2 + delayY,0),"Out","Quad",0.6,true)
+
+		task.delay(4,function()
+			notif:TweenPosition(UDim2.new(1,300,0.2 + delayY,0),"In","Quad",0.6,true)
+			task.wait(0.6)
+			notif:Destroy()
+		end)
+
+	end
+
+	-- SHOW NOTIFICATIONS
+	notify("THANK YOU for using Pizza Menu 🍕",0)
+	task.wait(0.5)
+	notify("OWNERS: cmp4s , kolletkloudsyt",0.08)
+
+	-- OPEN BUTTON
+	local openButton = Instance.new("ImageButton")
+	openButton.Size = UDim2.new(0,60,0,60)
+	openButton.Position = UDim2.new(0,20,1,-80)
+	openButton.BackgroundTransparency = 1
+	openButton.Image = "https://www.roblox.com/asset-thumbnail/image?assetId=5822600836&width=420&height=420&format=png"
+	openButton.Parent = screenGui
+
+	-- DRAG SYSTEM
+	local dragging = false
+	local dragStart
+	local startPos
+
+	openButton.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+			dragStart = input.Position
+			startPos = openButton.Position
+		end
+	end)
+
+	openButton.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = false
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+			local delta = input.Position - dragStart
+			openButton.Position = UDim2.new(
+				startPos.X.Scale,
+				startPos.X.Offset + delta.X,
+				startPos.Y.Scale,
+				startPos.Y.Offset + delta.Y
+			)
+		end
+	end)
+
+	-- MAIN FRAME
+	local mainFrame = Instance.new("Frame")
+	mainFrame.Size = UDim2.new(0,240,0,320)
+	mainFrame.Position = UDim2.new(0.5,-120,0.5,-160)
+	mainFrame.BackgroundColor3 = Color3.fromRGB(255,117,24)
+	mainFrame.Visible = false
+	mainFrame.Active = true
+	mainFrame.Draggable = true
+	mainFrame.Parent = screenGui
+
+	local corner = Instance.new("UICorner",mainFrame)
+	corner.CornerRadius = UDim.new(0,12)
+
+	openButton.MouseButton1Click:Connect(function()
+		playClick()
+		mainFrame.Visible = not mainFrame.Visible
+	end)
+
+	local function roundButton(btn)
+		local c = Instance.new("UICorner")
+		c.CornerRadius = UDim.new(0,8)
+		c.Parent = btn
+
+		btn.MouseButton1Click:Connect(playClick)
+	end
+
+	-- TITLE
+	local title = Instance.new("TextLabel")
+	title.Size = UDim2.new(1,0,0,25)
+	title.BackgroundTransparency = 1
+	title.Text = "PIZZA GUI"
+	title.TextColor3 = Color3.fromRGB(255,165,0)
+	title.TextScaled = true
+	title.Font = Enum.Font.Fantasy
+	title.Parent = mainFrame
+
+	-- TABS
+	local mainTab = Instance.new("TextButton")
+	mainTab.Size = UDim2.new(0.5,0,0,25)
+	mainTab.Position = UDim2.new(0,0,0,25)
+	mainTab.Text = "Main Mods"
+	mainTab.Parent = mainFrame
+
+	local coolTab = Instance.new("TextButton")
+	coolTab.Size = UDim2.new(0.5,0,0,25)
+	coolTab.Position = UDim2.new(0.5,0,0,25)
+	coolTab.Text = "Cool Stuff"
+	coolTab.Parent = mainFrame
+
+	roundButton(mainTab)
+	roundButton(coolTab)
+
+	local mainPage = Instance.new("Frame")
+	mainPage.Size = UDim2.new(1,0,1,-50)
+	mainPage.Position = UDim2.new(0,0,0,50)
+	mainPage.BackgroundTransparency = 1
+	mainPage.Parent = mainFrame
+
+	local coolPage = Instance.new("Frame")
+	coolPage.Size = UDim2.new(1,0,1,-50)
+	coolPage.Position = UDim2.new(0,0,0,50)
+	coolPage.BackgroundTransparency = 1
+	coolPage.Visible = false
+	coolPage.Parent = mainFrame
+
+	mainTab.MouseButton1Click:Connect(function()
+		mainPage.Visible = true
+		coolPage.Visible = false
+	end)
+
+	coolTab.MouseButton1Click:Connect(function()
+		mainPage.Visible = false
+		coolPage.Visible = true
+	end)
+
+	local function makeButton(text,y,parent)
+		local b = Instance.new("TextButton")
+		b.Size = UDim2.new(0,200,0,30)
+		b.Position = UDim2.new(0,20,0,y)
+		b.Text = text
+		b.BackgroundColor3 = Color3.fromRGB(255,200,120)
+		b.TextScaled = true
+		b.Parent = parent
+		roundButton(b)
+		return b
+	end
+
+	local savedPosition=nil
+
+	local saveButton = makeButton("Save Pos",10,mainPage)
+	local tpButtonMain = makeButton("Teleport",50,mainPage)
+	local ragdollNoclipButton = makeButton("Ragdoll Noclip: OFF",90,mainPage)
+
+	local wallTPButton = makeButton("Wall TP",10,coolPage)
+
+	-- SAVE POSITION
+	saveButton.MouseButton1Click:Connect(function()
+
+		local char=player.Character
+		if char and char:FindFirstChild("HumanoidRootPart") then
+
+			savedPosition=char.HumanoidRootPart.Position
+
+			if savedMarker then
+				savedMarker:Destroy()
+			end
+
+			savedMarker=Instance.new("Part")
+			savedMarker.Shape=Enum.PartType.Ball
+			savedMarker.Size=Vector3.new(2,2,2)
+			savedMarker.Position=savedPosition
+			savedMarker.Anchored=true
+			savedMarker.CanCollide=false
+			savedMarker.Color=Color3.fromRGB(255,117,24)
+			savedMarker.Material=Enum.Material.Neon
+			savedMarker.Parent=workspace
+
+		end
+
+	end)
+
+	-- TELEPORT
+	tpButtonMain.MouseButton1Click:Connect(function()
+		local char=player.Character
+		if savedPosition and char then
+			char:MoveTo(savedPosition)
+		end
 	end)
 
 end
 
-notify("THANK YOU for using Pizza Menu 🍕",0)
-task.wait(.4)
-notify("OWNERS: cmp4s , kolletkloudsyt",0.08)
-
--------------------------------------------------
--- PIZZA BUTTON
--------------------------------------------------
-
-local openHolder = Instance.new("Frame")
-openHolder.Size = UDim2.new(0,60,0,60)
-openHolder.Position = UDim2.new(0,20,1,-80)
-openHolder.BackgroundTransparency = 1
-openHolder.Parent = gui
-
-local pizzaImage = Instance.new("ImageLabel")
-pizzaImage.Size = UDim2.new(1,0,1,0)
-pizzaImage.BackgroundTransparency = 1
-pizzaImage.Image = "rbxassetid://5822600836"
-pizzaImage.Parent = openHolder
-
-local openButton = Instance.new("TextButton")
-openButton.Size = UDim2.new(1,0,1,0)
-openButton.BackgroundTransparency = 1
-openButton.Text = ""
-openButton.Parent = openHolder
-
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(1,0)
-corner.Parent = openHolder
-
--------------------------------------------------
--- DRAGGING
--------------------------------------------------
-
-local dragging=false
-local dragStart
-local startPos
-
-openButton.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging=true
-		dragStart=input.Position
-		startPos=openHolder.Position
-	end
-end)
-
-openButton.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging=false
-	end
-end)
-
-UIS.InputChanged:Connect(function(input)
-	if dragging and input.UserInputType==Enum.UserInputType.MouseMovement then
-		local delta=input.Position-dragStart
-		openHolder.Position=UDim2.new(startPos.X.Scale,startPos.X.Offset+delta.X,startPos.Y.Scale,startPos.Y.Offset+delta.Y)
-	end
-end)
-
--------------------------------------------------
--- MAIN MENU
--------------------------------------------------
-
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0,240,0,320)
-frame.Position = UDim2.new(.5,-120,.5,-160)
-frame.BackgroundColor3 = Color3.fromRGB(255,117,24)
-frame.Visible=false
-frame.Active=true
-frame.Draggable=true
-frame.Parent=gui
-
-Instance.new("UICorner",frame)
-
--- title
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1,0,0,30)
-title.BackgroundTransparency = 1
-title.Text = "PIZZA GUI"
-title.TextScaled = true
-title.Font = Enum.Font.Fantasy
-title.TextColor3 = Color3.fromRGB(255,165,0)
-title.Parent = frame
-
--------------------------------------------------
--- BUTTON BOUNCE
--------------------------------------------------
-
-local function bounce()
-
-	local shrink = TweenService:Create(
-		openHolder,
-		TweenInfo.new(0.08),
-		{Size = UDim2.new(0,50,0,50)}
-	)
-
-	local grow = TweenService:Create(
-		openHolder,
-		TweenInfo.new(0.08),
-		{Size = UDim2.new(0,60,0,60)}
-	)
-
-	shrink:Play()
-	shrink.Completed:Wait()
-	grow:Play()
-
-end
-
--------------------------------------------------
--- OPEN MENU
--------------------------------------------------
-
-openButton.MouseButton1Click:Connect(function()
-
-	playClick()
-	bounce()
-
-	frame.Visible = not frame.Visible
-
-end)
-
--------------------------------------------------
--- BUTTON CREATOR
--------------------------------------------------
-
-local function makeButton(text,y)
-
-	local b = Instance.new("TextButton")
-	b.Size = UDim2.new(0,200,0,30)
-	b.Position = UDim2.new(0,20,0,y)
-	b.Text = text
-	b.BackgroundColor3 = Color3.fromRGB(255,200,120)
-	b.TextScaled = true
-	b.Parent = frame
-
-	Instance.new("UICorner",b)
-
-	b.MouseButton1Click:Connect(playClick)
-
-	return b
-end
-
-local saveButton = makeButton("Save Pos",50)
-local tpButtonMain = makeButton("Teleport",90)
-local wallTPButton = makeButton("Wall TP",130)
-
--------------------------------------------------
--- SAVE POS
--------------------------------------------------
-
-local savedPosition
-local savedMarker
-
-saveButton.MouseButton1Click:Connect(function()
-
-	local char = player.Character
-	local root = char and char:FindFirstChild("HumanoidRootPart")
-
-	if root then
-
-		savedPosition = root.Position
-
-		if savedMarker then savedMarker:Destroy() end
-
-		savedMarker = Instance.new("Part")
-		savedMarker.Shape = Enum.PartType.Ball
-		savedMarker.Size = Vector3.new(2,2,2)
-		savedMarker.Position = savedPosition
-		savedMarker.Anchored = true
-		savedMarker.CanCollide = false
-		savedMarker.Material = Enum.Material.Neon
-		savedMarker.Color = Color3.fromRGB(255,117,24)
-		savedMarker.Parent = workspace
-
-	end
-
-end)
-
--------------------------------------------------
--- TELEPORT
--------------------------------------------------
-
-tpButtonMain.MouseButton1Click:Connect(function()
-
-	local char = player.Character
-	local root = char and char:FindFirstChild("HumanoidRootPart")
-
-	if root and savedPosition then
-		root.CFrame = CFrame.new(savedPosition)
-	end
-
-end)
-
--------------------------------------------------
--- WALL TP
--------------------------------------------------
-
-local wallTPEnabled=false
-local wallBall
-local tpButton
-
-wallTPButton.MouseButton1Click:Connect(function()
-
-	wallTPEnabled = not wallTPEnabled
-
-	if wallTPEnabled then
-
-		wallBall = Instance.new("Part")
-		wallBall.Shape = Enum.PartType.Ball
-		wallBall.Size = Vector3.new(2,2,2)
-		wallBall.Anchored = true
-		wallBall.CanCollide = false
-		wallBall.Material = Enum.Material.Neon
-		wallBall.Color = Color3.fromRGB(255,117,24)
-		wallBall.Parent = workspace
-
-		tpButton = Instance.new("TextButton")
-		tpButton.Size = UDim2.new(0,160,0,50)
-		tpButton.Position = UDim2.new(.5,-80,.8,0)
-		tpButton.Text = "TP INSIDE"
-		tpButton.TextScaled = true
-		tpButton.BackgroundColor3 = Color3.fromRGB(40,120,255)
-		tpButton.Parent = gui
-
-		Instance.new("UICorner",tpButton)
-
-		tpButton.MouseButton1Click:Connect(function()
-
-			local char = player.Character
-			local root = char and char:FindFirstChild("HumanoidRootPart")
-
-			if root and wallBall then
-				root.CFrame = CFrame.new(wallBall.Position)
-			end
-
-		end)
-
-	else
-
-		if wallBall then wallBall:Destroy() end
-		if tpButton then tpButton:Destroy() end
-
-	end
-
-end)
-
-RunService.RenderStepped:Connect(function()
-
-	if wallTPEnabled and wallBall then
-
-		local char = player.Character
-		local root = char and char:FindFirstChild("HumanoidRootPart")
-
-		if root then
-			wallBall.Position = root.Position + (root.CFrame.LookVector * 3)
-		end
-
-	end
-
+createPizzaGUI()
+
+player.CharacterAdded:Connect(function()
+	task.wait(1)
+	createPizzaGUI()
 end)
